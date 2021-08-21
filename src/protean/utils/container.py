@@ -1,124 +1,25 @@
-import copy
 import inspect
 import logging
 
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any
 
 from protean.core.field.basic import Field
-from protean.exceptions import InvalidDataError, NotSupportedError, ValidationError
+from protean.exceptions import ValidationError
 
 logger = logging.getLogger("protean.domain")
 
 
-class _ContainerMetaclass(type):
-    """
-    This base metaclass processes the class declaration and
-    constructs a meta object that can be used to introspect
-    the concrete Container class later.
-
-    It also sets up a `meta_` attribute on the concrete class
-    to an instance of Meta, either the default of one that is
-    defined in the concrete class.
-    """
-
-    def __new__(mcs, name, bases, attrs, **kwargs):
-        """Initialize Container MetaClass and load attributes"""
-
-        # Ensure initialization is only performed for subclasses of Container
-        # (excluding Container class itself).
-        parents = [b for b in bases if isinstance(b, _ContainerMetaclass)]
-        if not parents:
-            return super().__new__(mcs, name, bases, attrs)
-
-        # Remove `abstract` in base classes if defined
-        for base in bases:
-            if hasattr(base, "Meta") and hasattr(base.Meta, "abstract"):
-                delattr(base.Meta, "abstract")
-
-        new_class = super().__new__(mcs, name, bases, attrs, **kwargs)
-
-        # Gather `Meta` class/object if defined
-        attr_meta = attrs.pop("Meta", None)
-        meta = attr_meta or getattr(new_class, "Meta", None)
-        setattr(new_class, "meta_", ContainerMeta(meta))
-
-        # Load declared fields
-        new_class._load_fields(attrs)
-
-        # Load declared fields from Base class, in case this Entity is subclassing another
-        new_class._load_base_class_fields(bases, attrs)
-
-        return new_class
-
-    def _load_base_class_fields(new_class, bases, attrs):
-        """If this class is subclassing another Container, add that Container's
-        fields.  Note that we loop over the bases in *reverse*.
-        This is necessary in order to maintain the correct order of fields.
-        """
-        for base in reversed(bases):
-            if hasattr(base, "meta_") and hasattr(base.meta_, "declared_fields"):
-                base_class_fields = {
-                    field_name: field_obj
-                    for (field_name, field_obj) in base.meta_.declared_fields.items()
-                    if field_name not in attrs and not field_obj.identifier
-                }
-                new_class._load_fields(base_class_fields)
-
-    def _load_fields(new_class, attrs):
-        """Load field items into Class"""
-        for attr_name, attr_obj in attrs.items():
-            if isinstance(attr_obj, Field):
-                setattr(new_class, attr_name, attr_obj)
-                new_class.meta_.declared_fields[attr_name] = attr_obj
+class Options:
+    def __init__(self, opts=None):
+        if opts:
+            attributes = inspect.getmembers(opts, lambda a: not (inspect.isroutine(a)))
+            for attr in attributes:
+                if not (attr[0].startswith("__") and attr[0].endswith("__")):
+                    setattr(self, attr[0], attr[1])
 
 
-class ContainerMeta:
-    """ Metadata info for the Container.
-
-    Options:
-    - ``abstract``: Indicates that this is an abstract entity (Ignores all other meta options)
-
-    Also acts as a placeholder for generated entity fields like:
-
-        :declared_fields: dict
-            Any instances of `Field` included as attributes on either the class
-            or on any of its superclasses will be include in this dictionary.
-    """
-
-    def __init__(self, meta):
-        attributes = inspect.getmembers(meta, lambda a: not (inspect.isroutine(a)))
-        for attr in attributes:
-            if not (attr[0].startswith("__") and attr[0].endswith("__")):
-                setattr(self, attr[0], attr[1])
-
-        # Common Meta attributes
-        self.abstract = getattr(meta, "abstract", None) or False
-        self.version = 1
-
-        # Initialize Options
-        # FIXME Move this to be within the container
-        self.declared_fields = {}
-
-    @property
-    def mandatory_fields(self):
-        """ Return the mandatory fields for this entity """
-        return {
-            field_name: field_obj
-            for field_name, field_obj in self.attributes.items()
-            if field_obj.required
-        }
-
-    @property
-    def attributes(self):
-        attributes_dict = {}
-        for field_name, field_obj in self.declared_fields.items():
-            attributes_dict[field_obj.get_attribute_name()] = field_obj
-
-        return attributes_dict
-
-
-class BaseContainer(metaclass=_ContainerMetaclass):
+class Container:
     """The Base class for Protean-Compliant Data Containers.
 
     Provides helper methods to custom define attributes, and find attribute names
@@ -129,11 +30,41 @@ class BaseContainer(metaclass=_ContainerMetaclass):
     META_OPTIONS = []
 
     def __new__(cls, *args, **kwargs):
-        if cls is BaseContainer:
-            raise TypeError("BaseContainer cannot be instantiated")
-        return super().__new__(cls)
+        """Prevent direct instantiation of Container class.
 
-    def __init__(self, *template, **kwargs):
+        `abc` module would have been a good fit, but this class has no
+        abstract methods, so `ABCMeta` will not prevent it from being
+        instantiated.
+        """
+        if cls is Container:
+            raise TypeError("Container cannot be instantiated")
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init_subclass__(subclass) -> None:
+        super().__init_subclass__()
+
+        if not Container in subclass.__bases__:
+            opts = getattr(subclass, "Options", None)
+
+            # Only use `Options` if it has been defined as part of the same subclass
+            if opts and opts.__qualname__.split(".")[-2] == subclass.__name__:
+                setattr(subclass, "_options", Options(opts))
+            else:
+                setattr(subclass, "_options", Options())
+
+    @classmethod
+    def _fields(cls) -> dict[str, type]:
+        attributes = inspect.getmembers(cls, lambda a: not (inspect.isroutine(a)))
+        return {attr[0]: attr[1] for attr in attributes if isinstance(attr[1], Field)}
+
+    @classmethod
+    def _attributes(cls) -> dict[str, type]:
+        return {
+            field_obj.get_attribute_name(): field_obj
+            for _, field_obj in cls._fields().items()
+        }
+
+    def __init__(self, **kwargs):
         """
         Initialise the container.
 
@@ -143,37 +74,16 @@ class BaseContainer(metaclass=_ContainerMetaclass):
             can even use a template for initial data.
         """
 
-        if self.meta_.abstract is True:
-            raise NotSupportedError(
-                f"{self.__class__.__name__} class has been marked abstract"
-                f" and cannot be instantiated"
+        if hasattr(self._options, "abstract") and self._options.abstract is True:
+            raise TypeError(
+                f"Can't instantiate abstract class {self.__class__.__name__}"
             )
 
         self.errors = defaultdict(list)
 
-        # Load the attributes based on the template
-        loaded_fields = []
-        for dictionary in template:
-            if not isinstance(dictionary, dict):
-                raise AssertionError(
-                    f'Positional argument "{dictionary}" passed must be a dict.'
-                    f"This argument serves as a template for loading common "
-                    f"values.",
-                )
-            for field_name, val in dictionary.items():
-                loaded_fields.append(field_name)
-                setattr(self, field_name, val)
-
-        # Now load against the keyword arguments
-        for field_name, val in kwargs.items():
-            loaded_fields.append(field_name)
-            setattr(self, field_name, val)
-
-        # Now load the remaining fields with a None value, which will fail
-        # for required fields
-        for field_name, field_obj in self.meta_.declared_fields.items():
-            if field_name not in loaded_fields:
-                setattr(self, field_name, None)
+        for name in self._fields():
+            value = kwargs.pop(name, ...)
+            setattr(self, name, value)
 
         self.defaults()
 
@@ -187,15 +97,6 @@ class BaseContainer(metaclass=_ContainerMetaclass):
             logger.error(self.errors)
             raise ValidationError(self.errors)
 
-    @classmethod
-    def build(cls, **values):
-        if values:
-            assert all(
-                attr in list(cls.meta_.declared_fields.keys()) for attr in values.keys()
-            )
-
-        return cls(**values)
-
     def defaults(self):
         """Placeholder method for defaults.
         To be overridden in concrete Containers, when an attribute's default depends on other attribute values.
@@ -207,15 +108,21 @@ class BaseContainer(metaclass=_ContainerMetaclass):
         """
         return defaultdict(list)
 
+    def _asdict(self: Any) -> dict[str, Any]:
+        return {
+            field_name: field_obj._asdict(getattr(self, field_name))
+            for field_name, field_obj in self._attributes().items()
+        }
+
     def __eq__(self, other):
         """Equivalence check for commands is based only on data.
 
-        Two Commands are considered equal if they have the same data.
+        Two containers are considered equal if they have the same data.
         """
         if type(other) is not type(self):
             return False
 
-        return self.to_dict() == other.to_dict()
+        return self._asdict() == other._asdict()
 
     def __hash__(self):
         """Overrides the default implementation and bases hashing on values"""
@@ -237,57 +144,13 @@ class BaseContainer(metaclass=_ContainerMetaclass):
         """
         return any(
             bool(getattr(self, field_name, None))
-            for field_name in self.meta_.attributes
+            for field_name in self._options.attributes
         )
 
     def __setattr__(self, name, value):
-        if name in self.meta_.declared_fields or name in [
+        if name in self._fields() or name in [
             "errors",
         ]:
             super().__setattr__(name, value)
         else:
-            raise InvalidDataError({name: ["is invalid"]})
-
-    def to_dict(self):
-        """ Return data as a dictionary """
-        return {
-            field_name: field_obj.as_dict(getattr(self, field_name, None))
-            for field_name, field_obj in self.meta_.attributes.items()
-        }
-
-    def clone(self):
-        """Deepclone the command"""
-        return copy.deepcopy(self)
-
-    def _clone_with_values(self, **kwargs):
-        """To be implemented in each command"""
-        raise NotImplementedError
-
-    @classmethod
-    def _extract_options(cls, **opts):
-        """A stand-in method for setting customized options on the Domain Element
-
-        Empty by default. To be overridden in each Element that expects or needs
-        specific options.
-        """
-        for key, default in cls.META_OPTIONS:
-            setattr(cls.meta_, key, cls._derive_preference(opts, key, default))
-
-    @classmethod
-    def _derive_preference(cls, kwargs: Dict, key: str, default: Any) -> Any:
-        """A common method to pop an element's preference from multiple sources
-
-        Args:
-            kwargs (Dict): Explicit options provided for element
-            element_cls (Any): The Domain Element to which options may be attached
-            key (str): The attribute to derive
-            default (Any): The default if no options are set
-
-        Returns:
-            Any: The attribute value
-        """
-        return (
-            kwargs.pop(key, None)
-            or (hasattr(cls.meta_, key) and getattr(cls.meta_, key))
-            or default
-        )
+            raise AttributeError({name: ["is invalid"]})

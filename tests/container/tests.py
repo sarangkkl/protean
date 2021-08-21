@@ -22,18 +22,11 @@ class TestContainerProperties:
 
         assert custom1 == custom2
 
-    @pytest.mark.xfail
-    def test_that_container_objects_are_immutable(self):
-        custom = CustomContainer(foo="a", bar="b")
-        with pytest.raises(InvalidOperationError):
-            custom.foo = "c"
-
     def test_output_to_dict(self):
         custom = CustomContainer(foo="a", bar="b")
-        assert custom.to_dict() == {"foo": "a", "bar": "b"}
+        assert custom._asdict() == {"foo": "a", "bar": "b"}
 
-    @pytest.mark.xfail
     def test_that_only_valid_attributes_can_be_assigned(self):
         custom = CustomContainer(foo="a", bar="b")
         with pytest.raises(AttributeError):
-            custom.foo = "bar"
+            custom.baz = "c"

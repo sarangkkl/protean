@@ -1,8 +1,8 @@
 from protean.core.field.basic import String
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 
-class CustomBaseContainer(BaseContainer):
+class CustomBaseContainer(Container):
     def __new__(cls, *args, **kwargs):
         if cls is CustomBaseContainer:
             raise TypeError("CustomBaseContainer cannot be instantiated")

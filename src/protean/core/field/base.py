@@ -93,9 +93,8 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
         messages.update(error_messages or {})
         self.error_messages = messages
 
-    def __get__(self, instance, owner):
-        if hasattr(instance, "__dict__"):
-            return instance.__dict__.get(self.field_name)
+    def __get__(self, instance: Any, owner: Any = None) -> Any:
+        return self._asdict(instance.__dict__[self.field_name])
 
     def __set__(self, instance, value):
         value = self._load(value)
@@ -145,7 +144,7 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def as_dict(self):
+    def _asdict(self):
         """Return JSON-compatible value of field"""
         pass
 
@@ -176,24 +175,20 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
 
         """
 
-        # Check if value is one among recognized empty values, or is False (for complex objects)
-        if value in self.empty_values:
+        if value == ...:
             # If a default has been set for the field return it
             if self.default is not None:
-                default = self.default
-                value = default() if callable(default) else default
-                return value
+                value = self.default() if callable(self.default) else self.default
 
-            # If no default is set and this field is required
+            # If no default is set and this field is required, raise exception
             elif self.required:
-                self.fail("required")
+                raise ValueError(f"Missing value for attribute {self.field_name}")
 
-            # In all other cases just return the passed value, as we do not want to
-            # run validations against an empty value
-            # Because of this behavior, we preserve the data sanctity for int and float objects,
-            # and return 0 or 0.0, as need be.
-            elif value is None:
-                return value
+            else:
+                value = None
+        else:
+            # Cast and Validate the value for this Field
+            value = self._cast_to_type(value)
 
         # If choices exist then validate that value is be one of the choices
         if self.choices:
@@ -203,9 +198,6 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
             for v in value_list:
                 if v not in self.choice_dict:
                     self.fail("invalid_choice", value=v, choices=list(self.choice_dict))
-
-        # Cast and Validate the value for this Field
-        value = self._cast_to_type(value)
 
         # Call the rest of the validators defined for this Field
         self._run_validators(value)

@@ -1,12 +1,12 @@
 import logging
 
 from protean.utils import DomainObjects, derive_element_class
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 logger = logging.getLogger("protean.event")
 
 
-class BaseEvent(BaseContainer):
+class BaseEvent(Container):
     """Base Event class that all Events should inherit from.
 
     Core functionality associated with Events, like timestamping, are specified

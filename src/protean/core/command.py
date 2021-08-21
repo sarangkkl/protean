@@ -1,9 +1,9 @@
 from protean.exceptions import InvalidDataError, ValidationError
 from protean.utils import DomainObjects, derive_element_class
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 
-class BaseCommand(BaseContainer):
+class BaseCommand(Container):
     """Base Command class that all commands should inherit from.
 
     Core functionality associated with commands, like timestamping and authentication, are specified

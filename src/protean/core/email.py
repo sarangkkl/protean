@@ -6,7 +6,7 @@ from protean.utils import (
     convert_str_values_to_list,
     derive_element_class,
 )
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 
 class BaseEmailProvider:
@@ -35,7 +35,7 @@ class BaseEmailProvider:
         )
 
 
-class BaseEmail(BaseContainer):
+class BaseEmail(Container):
     """Base Email class that should implemented by all Domain Email Messages.
 
     This is also a marker class that is referenced when emails are registered

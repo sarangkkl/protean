@@ -37,7 +37,7 @@ class String(Field):
             return value
         return str(value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -56,7 +56,7 @@ class Text(Field):
             return value
         return str(value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -92,7 +92,7 @@ class Integer(Field):
         except (ValueError, TypeError):
             self.fail("invalid", value=value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -125,7 +125,7 @@ class Float(Field):
         except (ValueError, TypeError):
             self.fail("invalid", value=value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -148,7 +148,7 @@ class Boolean(Field):
             return False
         self.fail("invalid", value=value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -200,7 +200,7 @@ class List(Field):
 
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         # FIXME Convert value of objects that the list holds?
         return value
@@ -228,7 +228,7 @@ class Dict(Field):
             self.fail("invalid", value=value)
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         # FIXME Convert value of objects that the dict holds?
         return value
@@ -270,7 +270,7 @@ class Auto(Field):
         """ Perform no validation for auto fields. Return the value as is"""
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -305,7 +305,7 @@ class Identifier(Field):
             # Mark Entity as Dirty
             instance.state_.mark_changed()
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -321,7 +321,7 @@ class Method(Field):
         """ Perform no validation for identifier fields. Return the value as is"""
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -338,7 +338,7 @@ class Nested(Field):
         """ Perform no validation for identifier fields. Return the value as is"""
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return value
 
@@ -363,7 +363,7 @@ class Date(Field):
         except ValueError:
             self.fail("invalid", value=value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return str(value) if value else None
 
@@ -385,6 +385,6 @@ class DateTime(Field):
         except ValueError:
             self.fail("invalid", value=value)
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return str(value) if value else None

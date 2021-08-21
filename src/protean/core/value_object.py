@@ -2,12 +2,12 @@
 import logging
 
 from protean.utils import DomainObjects, derive_element_class
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 logger = logging.getLogger("protean.domain.value_object")
 
 
-class BaseValueObject(BaseContainer):
+class BaseValueObject(Container):
     """The Base class for Protean-Compliant Domain Value Objects.
 
     Provides helper methods to custom define attributes, and find attribute names

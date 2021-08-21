@@ -1,15 +1,15 @@
 import logging
 
+from protean.core.entity import BaseEntity
 from protean.core.field.association import HasMany, HasOne
 from protean.exceptions import IncorrectUsageError, ValidationError
 from protean.globals import current_domain
 from protean.utils import Database, DomainObjects, derive_element_class
-from protean.utils.container import BaseContainer
 
 logger = logging.getLogger("protean.repository")
 
 
-class BaseRepository(BaseContainer):
+class BaseRepository(BaseEntity):
     """This is the baseclass for concrete Repository implementations.
 
     The three methods in this baseclass to `add`, `get` or `remove` entities are sufficient in most cases

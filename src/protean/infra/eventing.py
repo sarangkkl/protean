@@ -7,7 +7,7 @@ from protean.core.field.basic import Auto, DateTime, Dict, Identifier, Integer, 
 from protean.core.repository import BaseRepository
 from protean.globals import current_domain
 from protean.utils import generate_identity
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 
 class MessageType(Enum):
@@ -15,7 +15,7 @@ class MessageType(Enum):
     COMMAND = "COMMAND"
 
 
-class Message(BaseContainer):
+class Message(Container):
     """Base class for Events and Commands.
 
     It provides concrete implementations for:

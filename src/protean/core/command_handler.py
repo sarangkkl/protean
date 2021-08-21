@@ -3,10 +3,10 @@ from typing import Any, Optional
 
 from protean.core.command import BaseCommand
 from protean.utils import DomainObjects, derive_element_class
-from protean.utils.container import BaseContainer
+from protean.utils.container import Container
 
 
-class BaseCommandHandler(BaseContainer):
+class BaseCommandHandler(Container):
     """Base Command Handler class that should implemented by all Domain CommandHandlers.
 
     This is also a marker class that is referenced when command handlers are registered
