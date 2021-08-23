@@ -106,7 +106,7 @@ class EventLog(BaseAggregate):
 
 
 class EventLogRepository(BaseRepository):
-    class Meta:
+    class Options:
         aggregate_cls = EventLog
 
     def get_most_recent_event_by_type_cls(self, event_cls: BaseEvent) -> EventLog:

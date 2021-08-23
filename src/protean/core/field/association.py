@@ -37,7 +37,7 @@ class _ReferenceField(Field):
         # FIXME Verify that the value being assigned is compatible with the remote field
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         raise NotImplementedError
 
@@ -97,7 +97,7 @@ class Reference(FieldCacheMixin, Field):
         if isinstance(self.to_cls, str):
             return "id"
         else:
-            return self.via or self.to_cls.meta_.id_field.attribute_name
+            return self.via or self.to_cls._id_field().attribute_name
 
     def _resolve_to_cls(self, instance):
         assert isinstance(self.to_cls, str)
@@ -128,8 +128,13 @@ class Reference(FieldCacheMixin, Field):
 
         # If `to_cls` was specified as a string, take this opportunity to fetch
         #   and update the correct entity class against it, if not already done
-        if isinstance(self.to_cls, str):
-            self._resolve_to_cls(instance)
+        try:
+            if isinstance(self.to_cls, str):
+                self._resolve_to_cls(instance)
+        except RuntimeError:
+            # Association's `__get__` may have been called by inspect
+            # Domain is not yet ready
+            return None
 
         reference_obj = None
         if hasattr(instance, "state_"):
@@ -215,7 +220,7 @@ class Reference(FieldCacheMixin, Field):
         #     self.fail('invalid', value=value)
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         raise NotImplementedError
 
@@ -255,12 +260,16 @@ class Association(FieldDescriptorMixin, FieldCacheMixin):
 
         # If `to_cls` was specified as a string, take this opportunity to fetch
         #   and update the correct entity class against it, if not already done
-        if isinstance(self.to_cls, str):
-            self.to_cls = fetch_element_cls_from_registry(
-                self.to_cls, (DomainObjects.AGGREGATE, DomainObjects.ENTITY)
-            )
-
+        try:
+            if isinstance(self.to_cls, str):
+                self.to_cls = fetch_element_cls_from_registry(
+                    self.to_cls, (DomainObjects.AGGREGATE, DomainObjects.ENTITY)
+                )
             # FIXME Test that `to_cls` contains a corresponding `Reference` field
+        except RuntimeError:
+            # Association's `__get__` may have been called by inspect
+            # Domain is not yet ready
+            return None
 
         try:
             reference_obj = self.get_cached_value(instance)
@@ -290,7 +299,7 @@ class Association(FieldDescriptorMixin, FieldCacheMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def as_dict(self):
+    def _asdict(self):
         """Return JSON-compatible value of field"""
         raise NotImplementedError
 
@@ -366,7 +375,7 @@ class HasOne(Association):
         except exceptions.ObjectNotFoundError:
             return None
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         if value is not None:
             return value.to_dict()
@@ -480,7 +489,7 @@ class HasMany(Association):
 
         return temp_data
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return [item.to_dict() for item in value]
 

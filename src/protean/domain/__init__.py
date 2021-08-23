@@ -355,7 +355,7 @@ class Domain(_PackageBoundObject):
     def _register_element(self, element_type, element_cls, **kwargs):  # noqa: C901
         """Register class into the domain"""
         # Check if `element_cls` is already a subclass of the Element Type
-        #   which would be the case in an explicit declaration like `class Account(BaseEntity):`
+        #   which would be the case in an explicit declaration like `class Account(Entity):`
         #
         # We will need to construct a class derived from the right base class
         #   if the Element was specified through annotation, like so:

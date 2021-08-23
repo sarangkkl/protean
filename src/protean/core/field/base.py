@@ -94,7 +94,10 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
         self.error_messages = messages
 
     def __get__(self, instance: Any, owner: Any = None) -> Any:
-        return self._asdict(instance.__dict__[self.field_name])
+        if self.field_name in instance.__dict__:
+            return self._asdict(instance.__dict__[self.field_name])
+        else:
+            return None
 
     def __set__(self, instance, value):
         value = self._load(value)
@@ -166,7 +169,7 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
         if errors:
             raise exceptions.ValidationError(errors)
 
-    def _load(self, value: Any):
+    def _load(self, value: Any) -> Any:
         """
         Load the value for the field, run validators and return the value.
         Subclasses can override this to provide custom load logic.
@@ -196,7 +199,7 @@ class Field(FieldDescriptorMixin, metaclass=ABCMeta):
             if not isinstance(value, (list, tuple)):
                 value_list = [value]
             for v in value_list:
-                if v not in self.choice_dict:
+                if v is not None and v not in self.choice_dict:
                     self.fail("invalid_choice", value=v, choices=list(self.choice_dict))
 
         # Call the rest of the validators defined for this Field

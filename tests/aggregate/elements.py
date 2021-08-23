@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 from protean.core.aggregate import BaseAggregate
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasMany, HasOne, Reference
 from protean.core.field.basic import Auto, DateTime, Integer, String, Text
 from protean.core.repository import BaseRepository
@@ -123,7 +123,7 @@ class PostViaWithReference(BaseAggregate):
     author = Reference("tests.aggregate.elements.Author")
 
 
-class Comment(BaseEntity):
+class Comment(Entity):
     content = Text()
     added_on = DateTime()
 
@@ -133,7 +133,7 @@ class Comment(BaseEntity):
         aggregate_cls = Post
 
 
-class CommentVia(BaseEntity):
+class CommentVia(Entity):
     content = Text()
     added_on = DateTime()
     posting_id = String()
@@ -142,7 +142,7 @@ class CommentVia(BaseEntity):
         aggregate_cls = PostVia
 
 
-class CommentViaWithReference(BaseEntity):
+class CommentViaWithReference(Entity):
     content = Text()
     added_on = DateTime()
     posting = Reference("tests.aggregate.elements.PostVia")
@@ -158,7 +158,7 @@ class Account(BaseAggregate):
     author = HasOne("tests.aggregate.elements.Author")
 
 
-class Author(BaseEntity):
+class Author(Entity):
     first_name = String(required=True, max_length=25)
     last_name = String(max_length=25)
     posts = HasMany("tests.aggregate.elements.Post")

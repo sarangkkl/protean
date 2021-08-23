@@ -44,7 +44,7 @@ class Job(BaseAggregate):
 
 
 class JobRepository(BaseRepository):
-    class Meta:
+    class Options:
         aggregate_cls = Job
 
     def get_most_recent_job_of_type(self, type: str) -> Job:

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from protean.core.aggregate import BaseAggregate
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasMany, HasOne, Reference
 from protean.core.field.basic import DateTime, Integer, String, Text
 from protean.core.field.embedded import ValueObject
@@ -48,7 +48,7 @@ class TestAggregateWithNoEnclosedEntitiesOrValueObjects:
         }
 
     def test_as_dict_with_aggregate_that_has_many_entities(self, test_domain):
-        class Comment(BaseEntity):
+        class Comment(Entity):
             content = Text(required=True)
 
             class Meta:
@@ -83,7 +83,7 @@ class TestAggregateWithNoEnclosedEntitiesOrValueObjects:
     def test_as_dict_with_aggregate_that_has_many_entities_with_reference(
         self, test_domain
     ):
-        class Comment(BaseEntity):
+        class Comment(Entity):
             content = Text(required=True)
             post = Reference("Post")
 
@@ -124,7 +124,7 @@ class TestAggregateWithNoEnclosedEntitiesOrValueObjects:
 
             meta = HasOne("PostMeta")
 
-        class PostMeta(BaseEntity):
+        class PostMeta(Entity):
             likes = Integer(default=0)
 
             class Meta:

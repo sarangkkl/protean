@@ -41,8 +41,12 @@ class BaseValueObject(Container):
 
     element_type = DomainObjects.VALUE_OBJECT
 
-    class Meta:
+    class Options:
         abstract = True
+
+    @classmethod
+    def _default_options(cls):
+        return []
 
 
 def value_object_factory(element_cls, **kwargs):

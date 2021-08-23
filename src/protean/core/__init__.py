@@ -4,7 +4,7 @@ from .command import BaseCommand
 from .command_handler import BaseCommandHandler
 from .domain_service import BaseDomainService
 from .email import BaseEmail
-from .entity import BaseEntity
+from .entity import Entity
 from .event import BaseEvent
 from .model import BaseModel
 from .repository import BaseRepository
@@ -20,7 +20,7 @@ __all__ = [
     BaseCommand,
     BaseCommandHandler,
     BaseEmail,
-    BaseEntity,
+    Entity,
     BaseDomainService,
     BaseEvent,
     BaseModel,

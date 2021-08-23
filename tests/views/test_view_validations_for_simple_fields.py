@@ -1,6 +1,6 @@
 import pytest
 
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasOne, Reference
 from protean.core.field.basic import String
 from protean.core.field.embedded import ValueObject
@@ -13,7 +13,7 @@ class Email(BaseValueObject):
     address = String()
 
 
-class Role(BaseEntity):
+class Role(Entity):
     name = String(max_length=50)
 
 

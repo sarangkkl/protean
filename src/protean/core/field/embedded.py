@@ -1,4 +1,5 @@
 """Module for defining embedded fields"""
+from typing import Any
 
 from protean.core.field.base import Field
 from protean.utils import DomainObjects, fetch_element_cls_from_registry
@@ -30,7 +31,7 @@ class _ShadowField(Field):
         # FIXME Verify that the value being assigned is compatible with the remote field
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         raise NotImplementedError
 
@@ -47,10 +48,7 @@ class ValueObject(Field):
         self._value_object_cls = value_object_cls
 
         self.embedded_fields = {}
-        for (
-            field_name,
-            field_obj,
-        ) in self._value_object_cls.meta_.declared_fields.items():
+        for (field_name, field_obj,) in self._value_object_cls._fields().items():
             self.embedded_fields[field_name] = _ShadowField(
                 self,
                 field_name,
@@ -102,14 +100,14 @@ class ValueObject(Field):
             self.fail("invalid", value=value)
         return value
 
-    def as_dict(self, value):
+    def _asdict(self, value):
         """Return JSON-compatible value of self"""
         return {
             field_obj.attribute_name: getattr(value, field_name)
             for field_name, field_obj in self.embedded_fields.items()
         }
 
-    def __set__(self, instance, value):
+    def __set__(self, instance, value) -> None:
         """Override `__set__` to coordinate between value object and its embedded fields"""
         if isinstance(self.value_object_cls, str):
             self.value_object_cls = fetch_element_cls_from_registry(
@@ -119,34 +117,41 @@ class ValueObject(Field):
             # Refresh attribute name, now that we know `value_object_cls` class
             self.attribute_name = self.get_attribute_name()
 
-        value = self._load(value)
-
-        if value:
-            # Check if the reference object has been saved. Otherwise, throw ValueError
-            self._set_own_value(instance, value)
-            self._set_embedded_values(instance, value)
+        # If ValueObject is being reinitialized (being set to ...),
+        #   check if a value has already been set
+        if value == ...:
+            if (
+                self.field_name in instance.__dict__
+                and instance.__dict__[self.field_name] is not None
+            ):
+                return
         else:
-            self._reset_values(instance)
+            if value:
+                # Check if the reference object has been saved. Otherwise, throw ValueError
+                self._set_own_value(instance, value)
+                self._set_embedded_values(instance, value)
+            else:
+                self._reset_values(instance)
 
-    def _set_own_value(self, instance, value):
+    def _set_own_value(self, instance, value) -> None:
         if value is None:
             instance.__dict__.pop(self.field_name, None)
         else:
             instance.__dict__[self.field_name] = value
 
-    def _set_embedded_values(self, instance, value):
+    def _set_embedded_values(self, instance, value) -> None:
         if value is None:
             for field_name in self.embedded_fields:
                 attribute_name = self.embedded_fields[field_name].attribute_name
                 instance.__dict__.pop(attribute_name, None)
                 self.embedded_fields[field_name].value = None
         else:
-            for field_name in value.meta_.declared_fields:
+            for field_name in value._fields():
                 self.embedded_fields[field_name].value = getattr(value, field_name)
                 attribute_name = self.embedded_fields[field_name].attribute_name
                 instance.__dict__[attribute_name] = getattr(value, field_name)
 
-    def __delete__(self, instance):
+    def __delete__(self, instance) -> None:
         self._reset_values(instance)
 
     def _reset_values(self, instance):

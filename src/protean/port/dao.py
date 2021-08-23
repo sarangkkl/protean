@@ -3,7 +3,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import Any
 
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.basic import Auto, Field
 from protean.core.queryset import QuerySet
 from protean.exceptions import ObjectNotFoundError, TooManyObjectsError, ValidationError
@@ -237,7 +237,7 @@ class BaseDAO(metaclass=ABCMeta):
     # Life-cycle methods #
     ######################
 
-    def get(self, identifier: Any) -> BaseEntity:
+    def get(self, identifier: Any) -> Entity:
         """Retrieve a specific Record from the Repository by its `identifier`.
 
         This method internally uses the `filter` method to fetch records.

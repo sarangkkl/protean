@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from protean.core.aggregate import BaseAggregate
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasMany, HasOne, Reference
 from protean.core.field.basic import DateTime, Integer, String, Text
 
@@ -16,13 +16,13 @@ class Post(BaseAggregate):
     comments = HasMany("Comment")
 
 
-class PostMeta(BaseEntity):
+class PostMeta(Entity):
     likes = Integer(default=0)
 
     post = Reference(Post)
 
 
-class Comment(BaseEntity):
+class Comment(Entity):
     content = Text(required=True)
     commented_at = DateTime(required=True, default=datetime.now())
 

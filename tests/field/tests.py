@@ -19,7 +19,7 @@ class DummyStringField(Field):
             self.fail("invalid_type")
         return value
 
-    def as_dict(self, value: str):
+    def _asdict(self, value: str):
         return value
 
 

@@ -1,13 +1,13 @@
 """Aggregate Functionality and Classes"""
 import logging
 
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.utils import DomainObjects, derive_element_class
 
 logger = logging.getLogger("protean.domain.aggregate")
 
 
-class BaseAggregate(BaseEntity):
+class BaseAggregate(Entity):
     """The Base class for Protean-Compliant Domain Aggregates.
 
     Provides helper methods to custom define aggregate attributes, and query attribute names

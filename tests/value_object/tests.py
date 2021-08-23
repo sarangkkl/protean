@@ -51,9 +51,9 @@ class TestEquivalence:
 
 
 class TestEmailVOProperties:
-    def test_output_to_dict(self):
+    def test_output_asdict(self):
         email = Email.from_address("john.doe@gmail.com")
-        assert email.to_dict() == {"address": "john.doe@gmail.com"}
+        assert email._asdict() == {"address": "john.doe@gmail.com"}
 
     def test_repr_output_of_value_object(self):
         email = Email.from_address("john.doe@gmail.com")
@@ -74,29 +74,29 @@ class TestEmailVOProperties:
 
 class TestEmailVOStructure:
     def test_email_vo_has_address_field(self):
-        assert len(Email.meta_.declared_fields) == 1
-        assert "address" in Email.meta_.declared_fields
+        assert len(Email._fields()) == 1
+        assert "address" in Email._fields()
 
 
 class TestBalanceVOStructure:
     def test_balance_vo_has_currency_and_amount_fields(self):
-        assert len(Balance.meta_.declared_fields) == 2
-        assert "currency" in Balance.meta_.declared_fields
-        assert "amount" in Balance.meta_.declared_fields
+        assert len(Balance._fields()) == 2
+        assert "currency" in Balance._fields()
+        assert "amount" in Balance._fields()
 
-    def test_output_to_dict(self):
-        balance = Balance.build(currency=Currency.USD.value, amount=0.0)
-        assert balance.to_dict() == {"currency": "USD", "amount": 0.0}
+    def test_output_asdict(self):
+        balance = Balance(currency=Currency.USD.value, amount=0.0)
+        assert balance._asdict() == {"currency": "USD", "amount": 0.0}
 
     def test_repr_output_of_value_object(self):
-        balance = Balance.build(currency=Currency.USD.value, amount=0.0)
+        balance = Balance(currency=Currency.USD.value, amount=0.0)
         assert (
             repr(balance)
             == "<Balance: Balance object ({'currency': 'USD', 'amount': 0.0})>"
         )
 
     def test_str_output_of_value_object(self):
-        balance = Balance.build(currency=Currency.USD.value, amount=0.0)
+        balance = Balance(currency=Currency.USD.value, amount=0.0)
         assert str(balance) == "Balance object ({'currency': 'USD', 'amount': 0.0})"
 
 
@@ -110,29 +110,29 @@ class TestBalanceVOBehavior:
 
     def test_equivalence(self):
         """Test that two Balance VOs are equal if their values are equal"""
-        balance1 = Balance.build(currency=Currency.USD.value, amount=0.0)
-        balance2 = Balance.build(currency=Currency.USD.value, amount=0.0)
+        balance1 = Balance(currency=Currency.USD.value, amount=0.0)
+        balance2 = Balance(currency=Currency.USD.value, amount=0.0)
 
         assert balance1 == balance2
 
-        balance3 = Balance.build(currency=Currency.INR.value, amount=0.0)
+        balance3 = Balance(currency=Currency.INR.value, amount=0.0)
 
         assert balance3 != balance1
 
     def test_that_only_valid_currencies_can_be_assigned_to_balance_object(self):
         with pytest.raises(ValidationError):
-            Balance.build(currency="FOO", amount=0.0)
+            Balance(currency="FOO", amount=0.0)
 
     def test_that_only_valid_float_values_can_be_assigned_to_balance_object(self):
         with pytest.raises(ValidationError):
-            Balance.build(currency="FOO", amount="abc")
+            Balance(currency="FOO", amount="abc")
 
     def test_that_a_negative_balance_less_than_one_trillion_is_invalid(self):
         with pytest.raises(ValidationError):
-            Balance.build(currency="FOO", amount=-100000000000000.0)
+            Balance(currency="FOO", amount=-100000000000000.0)
 
     def test_that_new_balance_object_is_generated_with_replace_method(self):
-        balance1 = Balance.build(currency=Currency.CAD.value, amount=0.0)
+        balance1 = Balance(currency=Currency.CAD.value, amount=0.0)
         balance2 = balance1.replace()
 
         assert balance2 is not balance1
@@ -169,9 +169,7 @@ class TestEmailVOBehavior:
 
 class TestEmailVOEmbedding:
     def test_that_user_has_all_the_required_fields(self):
-        assert all(
-            field_name in User.meta_.declared_fields for field_name in ["email", "name"]
-        )
+        assert all(field_name in User._fields() for field_name in ["email", "name"])
 
     def test_that_user_can_be_initialized_successfully(self):
         user = User(email=Email.from_address("john.doe@gmail.com"))
@@ -204,17 +202,14 @@ class TestEmailVOEmbedding:
 class TestBalanceVOEmbedding:
     def test_that_account_has_all_the_required_fields(self):
         assert all(
-            field_name in Account.meta_.declared_fields
-            for field_name in ["balance", "kind"]
+            field_name in Account._fields() for field_name in ["balance", "kind"]
         )
 
     def test_that_account_can_be_initialized_successfully(self):
-        account = Account(
-            balance=Balance.build(currency="USD", amount=150.0), kind="PRIMARY"
-        )
+        account = Account(balance=Balance(currency="USD", amount=150.0), kind="PRIMARY")
         assert account is not None
         assert account.id is not None
-        assert account.balance == Balance.build(currency="USD", amount=150.0)
+        assert account.balance == Balance(currency="USD", amount=150.0)
         assert account.balance_currency == "USD"
         assert account.balance_amount == 150.0
 
@@ -222,7 +217,7 @@ class TestBalanceVOEmbedding:
         account = Account(balance_currency="USD", balance_amount=150.0, kind="PRIMARY")
         assert account is not None
         assert account.id is not None
-        assert account.balance == Balance.build(currency="USD", amount=150.0)
+        assert account.balance == Balance(currency="USD", amount=150.0)
         assert account.balance_currency == "USD"
         assert account.balance_amount == 150.0
 
@@ -244,16 +239,16 @@ class TestBalanceVOEmbedding:
 
 class TestNamedEmbedding:
     def test_that_explicit_names_are_used(self):
-        assert len(PolymorphicConnection.meta_.declared_fields) == 2
-        assert "connected_id" in PolymorphicConnection.meta_.declared_fields
-        assert "connected_type" in PolymorphicConnection.meta_.declared_fields
+        assert len(PolymorphicConnection._fields()) == 2
+        assert "connected_id" in PolymorphicConnection._fields()
+        assert "connected_type" in PolymorphicConnection._fields()
 
     def test_that_explicit_names_are_preserved_in_aggregate(self):
-        assert len(PolymorphicOwner.meta_.declared_fields) == 2
-        assert "id" in PolymorphicOwner.meta_.declared_fields
-        assert "connector" in PolymorphicOwner.meta_.declared_fields
+        assert len(PolymorphicOwner._fields()) == 2
+        assert "id" in PolymorphicOwner._fields()
+        assert "connector" in PolymorphicOwner._fields()
 
         owner = PolymorphicOwner()
-        assert owner.meta_.attributes is not None
-        assert "connected_id" in owner.meta_.attributes
-        assert "connected_type" in owner.meta_.attributes
+        assert owner._attributes() is not None
+        assert "connected_id" in owner._attributes()
+        assert "connected_type" in owner._attributes()

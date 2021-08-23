@@ -1,6 +1,6 @@
 import logging
 
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasMany, HasOne
 from protean.exceptions import IncorrectUsageError, ValidationError
 from protean.globals import current_domain
@@ -9,7 +9,7 @@ from protean.utils import Database, DomainObjects, derive_element_class
 logger = logging.getLogger("protean.repository")
 
 
-class BaseRepository(BaseEntity):
+class BaseRepository(Entity):
     """This is the baseclass for concrete Repository implementations.
 
     The three methods in this baseclass to `add`, `get` or `remove` entities are sufficient in most cases
@@ -24,7 +24,9 @@ class BaseRepository(BaseEntity):
 
     element_type = DomainObjects.REPOSITORY
 
-    META_OPTIONS = [("aggregate_cls", None), ("database", "ALL")]
+    @classmethod
+    def _default_options(cls):
+        return [("aggregate_cls", None), ("database", "ALL")]
 
     def __new__(cls, *args, **kwargs):
         # Prevent instantiation of `BaseRepository itself`
@@ -65,7 +67,7 @@ class BaseRepository(BaseEntity):
         #
         # The details of in-transit child objects are maintained as part of the `has_many_field` itself
         #   in a variable called `_temp_cache`
-        for field_name, field in aggregate.meta_.declared_fields.items():
+        for field_name, field in aggregate._options.declared_fields.items():
             if isinstance(field, HasMany):
                 for _, item in aggregate._temp_cache[field_name]["removed"].items():
                     dao = current_domain.get_dao(field.to_cls)
@@ -115,7 +117,7 @@ class BaseRepository(BaseEntity):
         if (not aggregate.state_.is_persisted) or (
             aggregate.state_.is_persisted and aggregate.state_.is_changed
         ):
-            dao = current_domain.get_dao(self.meta_.aggregate_cls)
+            dao = current_domain.get_dao(self._options.aggregate_cls)
             dao.save(aggregate)
 
         return aggregate
@@ -135,7 +137,7 @@ class BaseRepository(BaseEntity):
         transaction in progress, changes are committed immediately to the persistence store. This mechanism
         is part of the DAO's design, and is automatically used wherever one tries to persist data.
         """
-        dao = current_domain.get_dao(self.meta_.aggregate_cls)
+        dao = current_domain.get_dao(self._options.aggregate_cls)
         dao.delete(aggregate)
 
         return aggregate
@@ -153,35 +155,37 @@ class BaseRepository(BaseEntity):
         `find_residents_of_area(zipcode)`, etc. It is also possible to make use of more complicated,
         domain-friendly design patterns like the `Specification` pattern.
         """
-        dao = current_domain.get_dao(self.meta_.aggregate_cls)
+        dao = current_domain.get_dao(self._options.aggregate_cls)
         return dao.get(identifier)
 
     def all(self):
         """This is a utility method to fetch all records of own type from persistence store.
 
         Returns a list of all records."""
-        dao = current_domain.get_dao(self.meta_.aggregate_cls)
+        dao = current_domain.get_dao(self._options.aggregate_cls)
         return dao.query.all().items
 
 
 def repository_factory(element_cls, **kwargs):
     element_cls = derive_element_class(element_cls, BaseRepository, **kwargs)
 
-    if not element_cls.meta_.aggregate_cls:
+    if not element_cls._options.aggregate_cls:
         raise IncorrectUsageError(
             "Repositories need to be associated with an Aggregate"
         )
 
     # FIXME Uncomment
-    # if not issubclass(element_cls.meta_.aggregate_cls, BaseAggregate):
+    # if not issubclass(element_cls._options.aggregate_cls, BaseAggregate):
     #     raise IncorrectUsageError(
     #         {"entity": ["Repositories can only be associated with an Aggregate"]}
     #     )
 
     # Ensure the value of `database` is among known databases
-    if element_cls.meta_.database != "ALL" and element_cls.meta_.database not in [
-        database.value for database in Database
-    ]:
+    if (
+        element_cls._options.database != "ALL"
+        and element_cls._options.database
+        not in [database.value for database in Database]
+    ):
         raise IncorrectUsageError(
             {"entity": ["Repositories should be associated with a valid Database"]}
         )

@@ -1,19 +1,19 @@
 from collections import defaultdict
 from enum import Enum
 
-from protean.core.entity import BaseEntity
+from protean.core.entity import Entity
 from protean.core.field.association import HasOne
 from protean.core.field.basic import Auto, Integer, String
 
 
-class AbstractPerson(BaseEntity):
+class AbstractPerson(Entity):
     age = Integer(default=5)
 
-    class Meta:
+    class Options:
         abstract = True
 
 
-class ConcretePerson(BaseEntity):
+class ConcretePerson(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
 
@@ -21,31 +21,31 @@ class ConcretePerson(BaseEntity):
 class AdultAbstractPerson(ConcretePerson):
     age = Integer(default=21)
 
-    class Meta:
+    class Options:
         abstract = True
 
 
-class Person(BaseEntity):
+class Person(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
 
-class PersonAutoSSN(BaseEntity):
+class PersonAutoSSN(Entity):
     ssn = Auto(identifier=True)
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
 
-class PersonExplicitID(BaseEntity):
+class PersonExplicitID(Entity):
     ssn = String(max_length=36, identifier=True)
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
 
-class Relative(BaseEntity):
+class Relative(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
@@ -55,52 +55,52 @@ class Relative(BaseEntity):
 class Adult(Person):
     pass
 
-    class Meta:
+    class Options:
         schema_name = "adults"
 
 
-class NotAPerson(BaseEntity):
+class NotAPerson(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
 
 # Entities to test Meta Info overriding # START #
-class DbPerson(BaseEntity):
+class DbPerson(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
-    class Meta:
+    class Options:
         schema_name = "pepes"
 
 
 class SqlPerson(Person):
-    class Meta:
+    class Options:
         schema_name = "people"
 
 
 class DifferentDbPerson(Person):
-    class Meta:
+    class Options:
         provider = "non-default"
 
 
 class SqlDifferentDbPerson(Person):
-    class Meta:
+    class Options:
         provider = "non-default-sql"
 
 
-class OrderedPerson(BaseEntity):
+class OrderedPerson(Entity):
     first_name = String(max_length=50, required=True)
     last_name = String(max_length=50)
     age = Integer(default=21)
 
-    class Meta:
+    class Options:
         order_by = "first_name"
 
 
 class OrderedPersonSubclass(Person):
-    class Meta:
+    class Options:
         order_by = "last_name"
 
 
@@ -109,7 +109,7 @@ class BuildingStatus(Enum):
     DONE = "DONE"
 
 
-class Building(BaseEntity):
+class Building(Entity):
     name = String(max_length=50)
     floors = Integer()
     status = String(choices=BuildingStatus)
