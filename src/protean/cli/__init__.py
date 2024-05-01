@@ -216,7 +216,7 @@ def generate_dockerfile(file_path):
                 "container_name": f"{project_name}-kibana",
                 "ELASTICSEARCH_HOSTS": "http://ul_es:9200"
             }
-    new_file_path = "docker1test.yml"
+    new_file_path = "docker-compose.yml"
     rendered_content = template.render(services=docker_dict["services"], version=docker_dict["version"])
     with open(new_file_path, 'w') as docker_compose_file:
         docker_compose_file.write(rendered_content)
