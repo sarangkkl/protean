@@ -1,0 +1,44 @@
+version: {{ version }}
+services:
+  {% if services.get("db") %}
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: {{ services["db"]["environment"]["POSTGRES_USER"] }}
+      POSTGRES_PASSWORD: {{ services["db"]["environment"]["POSTGRES_PASSWORD"] }}
+      POSTGRES_DB: {{ services["db"]["environment"]["POSTGRES_DB"] }}
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    container_name: {{ services["db"]["container_name"] }}
+    volumes:
+      - "/var/lib/postgresql/data"
+    command: ["bin/elasticsearch", "-Ediscovery.type=single-node"]
+  {% endif %}
+  {% if services.get("es") %}
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    container_name: {{ services["es"]["container_name"] }}
+    command: ["bin/elasticsearch", "-Ediscovery.type=single-node"]
+    environment:
+      "ES_JAVA_OPTS=-Xms256m -Xmx512m"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.2
+    ports:
+      - "5601:5601"
+    restart: unless-stopped
+    container_name: {{ services["kibana"]["container_name"] }}
+    environment:
+      ELASTICSEARCH_HOSTS: "http://{{ services["kibana"]["ELASTICSEARCH_HOSTS"] }}"
+
+  {% endif %}
+  redis:
+    image: redis:latest
+    container_name: redis-symphony
+    restart: unless-stopped
+    ports:
+      - 6379:6379
