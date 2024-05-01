@@ -31,7 +31,8 @@ from protean.cli.new import new
 from protean.cli.shell import shell
 from protean.exceptions import NoDomainException
 from protean.utils.domain_discovery import derive_domain
-
+from protean.utils import Database
+import pkg_resources
 # Create the Typer app
 #   `no_args_is_help=True` will show the help message when no arguments are passed
 app = typer.Typer(no_args_is_help=True)
@@ -142,3 +143,83 @@ def server(
 
     engine = Engine(domain, test_mode=test_mode)
     engine.run()
+
+
+def extract_username_password_database_name(uri):
+    """Extracts username, password and database name from a URI."""
+    if not uri:
+        return None, None, None
+
+    uri = uri.split("://")[1]
+    user_pass,dbname_string = uri.split("@")
+
+    username,password = user_pass.split(":")
+    database_name = dbname_string.split("/")[1]
+
+    return username, password, database_name
+
+from jinja2 import Environment, FileSystemLoader
+
+@main.command()
+@click.option("-c", "--file_path")
+def generate_dockerfile(file_path):
+    """Generate a Dockerfile for the Protean project"""
+
+    domain_path = os.path.realpath(file_path)
+    from protean.domain import Domain
+    domain = Domain(__file__, "Tests")
+    
+    docker_dict = {}
+    project_name = input("Enter project name: ") or "protean"
+    version = input("Enter version: ") or "0.1"
+    docker_dict["version"] = version
+    docker_dict["services"] = {}
+  
+    domain = derive_domain(domain_path)
+    
+    databases = domain.config.get("DATABASES")
+    all_databases = databases.keys()
+    templates_path = pkg_resources.resource_filename(__name__, 'template')
+    env = Environment(loader=FileSystemLoader(templates_path))
+    template = env.get_template('docker-template.yml.j2')
+    for db in all_databases:
+        if databases.get(db).get("DATABASE") == Database.POSTGRESQL.value and docker_dict.get("services").get("db") is None:
+
+            username,password,database_name = extract_username_password_database_name(databases.get(db).get("DATABASE_URI"))
+            docker_dict["services"]["db"] = {
+                "image": "postgres:latest",
+                "environment": {
+                    "POSTGRES_USER":username,
+                    "POSTGRES_PASSWORD":password,
+                    "POSTGRES_DB":database_name,
+                },
+                "ports": ["5432:5432"],
+                "restart":"unless-stopped",
+                "container_name": f"{project_name}-db",
+                "volumes": ["/var/lib/postgresql/data"],
+                "command": ["postgres", "-c", "log_destination=stderr"]
+            }
+        
+        if databases.get(db).get("DATABASE") == Database.ELASTICSEARCH.value and docker_dict.get("services").get("es") is None:
+            docker_dict["services"]["es"] = {
+                "image": "docker.elastic.co/elasticsearch/elasticsearch:7.10.2",
+                "ports": ["9200:9200"],
+                "restart":"unless-stopped",
+                "container_name": f"{project_name}-es",
+                "environment": "ES_JAVA_OPTS=-Xms256m -Xmx512m"
+            }
+            
+            docker_dict["services"]["kibana"] = {
+                "image": "docker.elastic.co/kibana/kibana:7.10.2",
+                "ports": ["5601:5601"],
+                "restart":"unless-stopped",
+                "container_name": f"{project_name}-kibana",
+                "ELASTICSEARCH_HOSTS": "http://ul_es:9200"
+            }
+    new_file_path = "docker-compose.yml"
+    rendered_content = template.render(services=docker_dict["services"], version=docker_dict["version"])
+    with open(new_file_path, 'w') as docker_compose_file:
+        docker_compose_file.write(rendered_content)
+
+        
+
